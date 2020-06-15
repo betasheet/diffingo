@@ -1,0 +1,11 @@
+# Memcached Commands
+#
+
+module Memcached;
+
+include "memcached.dgo";
+
+instantiate unit MemcachedCommand as CompactMemcachedCommand {
+    opcode;
+    key;
+};

@@ -1,0 +1,6 @@
+/lib/
+/tmp/
+/src/
+/include/
+.cproject
+.project

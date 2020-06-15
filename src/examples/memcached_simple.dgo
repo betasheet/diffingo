@@ -1,0 +1,25 @@
+# Memcached Commands
+
+module Memcached;
+
+type MemcachedCommand = unit {
+    %byteorder = big;
+
+    magic_code         : uint8;
+    opcode             : uint8;
+    key_len            : uint16;
+    extras_len         : uint8;
+                       : bytes &length = 1;  # reserved for future use
+    status_or_v_bucket : uint16;
+    total_len          : uint32;
+    opaque             : bytes &length = 4;
+    cas                : bytes &length = 8;
+    
+    var value_len      : uint32
+                           &parse = self.total_len - (self.extras_len + self.key_len)
+                           &serialize = self.total_len = self.key_len + self.extras_len + $$;
+    
+    extras             : bytes &length = self.extras_len;
+    key                : string &length = self.key_len;
+    value              : bytes &length = self.value_len;
+};

@@ -1,0 +1,101 @@
+#
+# TODO:
+#
+# - Continued headers
+# - decode URIs
+# - connection: keep-alive, close
+# - software versions
+# - multipart bodies
+# - partial content
+# - head responses (i.e. Content-Length but no body)
+#
+# - enable/disable support for different features (e.g. chunked content)
+
+module HTTP;
+
+const Token      = /[^ \t\r\n]+/;
+const URI        = /[^ \t\r\n]+/;
+const NewLine    = /\r?\n/;
+const RestOfLine = /[^\r\n]*/;
+const FullLine   = /[^\r\n]*\r?\n/;
+const Integer    = /[0-9]+/;
+const HexInteger = /[0-9a-zA-Z]+/;
+const WhiteSpace = /[ \t]+/;
+const OptionalWhiteSpace = /[ \t]*/;
+
+export type Request = unit {
+    request: RequestLine;
+    message: Message(True);
+};
+
+export type Reply = unit {
+    reply: ReplyLine;
+    message: Message(False);
+};
+
+type Version = unit {
+    :        /HTTP\//;
+    number:  /[0-9]+\.[0-9]*/;
+};
+
+type RequestLine = unit {
+    method:  Token;
+    :        WhiteSpace;
+    uri:     URI;
+    :        WhiteSpace;
+    version: Version;
+    :        NewLine;
+};
+
+# TODO: should transform functions operate on streams? define within c++ runtime libs?
+#transform stringEncodedUint32 <string, uint32> {
+#    uint32 decode(input: string){
+#        return static_cast<uint32>(std::stoul(input));
+#    }
+#    string encode(value: uint32){
+#        return std::to_string(value);
+#    }
+#}
+
+type ReplyLine = unit {
+    version: Version;
+    :        WhiteSpace;
+    status:  Integer &transform(stringEncodedUint32);
+    :        OptionalWhiteSpace;
+    reason:  RestOfLine;
+    :        NewLine;
+};
+
+type Message = unit(is_request: bool) {
+    headers:    list<Header(self)>;
+    end_of_hdr: NewLine;
+
+    var content_length: uint64
+      &transform(stringEncodedUint64)
+      &parse = (find(self.headers, h => h.name_upper == "CONTENT-LENGTH", h => h.content, None))
+      &serialize = (find(self.headers, h => h.name_upper == "CONTENT-LENGTH", h => h.content = $$, None));
+
+    var has_body: bool
+      &parse = (self.content_length && self.content_length > 0);
+
+    var is_request: bool = is_request;
+
+    body:       Body(self) if (self.has_body);
+};
+
+const HeaderName  = /[^:\r\n]+/;
+const HeaderValue = /[^\r\n]*/;
+
+type Header = unit(msg: Message) {
+    name:    HeaderName;
+    :        /:[\t ]*/;
+    content: HeaderValue;
+    :        NewLine;
+    
+    # name_upper is only derived variable for parsing, not included in serialization
+    var name_upper: string &parse=uppercase(self.name);
+};
+
+type Body = unit(msg: Message) {
+    content: bytes &chunked &length=msg.content_length;
+};
