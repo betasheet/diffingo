@@ -1,6 +1,6 @@
 Welcome! This is the place to get going with Diffingo :)
 
-# Background & Details
+# Background & details
 
 See [diffingo.pdf](diffingo.pdf).
 
